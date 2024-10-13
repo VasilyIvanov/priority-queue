@@ -11,7 +11,7 @@ export class PriorityQueue<TElement, TPriority extends PriorityQueueNodePriority
     #size: number;
 
     public constructor(params?: {
-        readonly items?: PriorityQueueNode<TElement, TPriority>[]
+        readonly items?: PriorityQueueNode<TElement, TPriority>[],
         readonly comparer?: (first: TPriority, second: TPriority) => number
     }) {
         this.#nodes = params?.items ?? [];
