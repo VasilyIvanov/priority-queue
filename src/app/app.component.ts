@@ -22,7 +22,7 @@ export class AppComponent implements OnInit {
         i--;
         continue;
       }
-      testData.push(rnd);
+      testData.push(Math.abs(rnd));
     }
 
     // testData.push(1);
@@ -58,11 +58,19 @@ function solution0(prices: number[], m: number): number {
 }
 
 function solution1(prices: number[], m: number): number {
-  const queue = new PriorityQueue<number>(prices.map((price) => [price, -price]));
+  const queue = new PriorityQueue<number, number>({
+    items: prices.map((price) => [price, -price])
+  });
 
   for (let i = 0; i < m; i++) {
-    const discounted = Math.floor(queue.dequeue() / 2);
-    queue.enqueue(discounted, -discounted);
+    const price = queue.dequeue();
+
+    if (price > 0) {
+      const discounted = Math.floor(price / 2);
+      queue.enqueue(discounted, -discounted);
+    } else {
+      break;
+    }
   }
 
   return sum(queue.getElements());

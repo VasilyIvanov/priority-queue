@@ -2,26 +2,32 @@ const ARITY = 4;
 const LOG2ARITY = 2;
 const GROW_FACTOR = 2;
 
-export type PriorityQueueNode<T> = [element: T, priority: number];
+type PriorityQueueNodePriority = number | BigInt | string | object;
+export type PriorityQueueNode<TElement, TPriority extends PriorityQueueNodePriority> = [element: TElement, priority: TPriority];
 
-export class PriorityQueue<T> {
-    readonly #nodes: PriorityQueueNode<T>[];
+export class PriorityQueue<TElement, TPriority extends PriorityQueueNodePriority> {
+    readonly #nodes: PriorityQueueNode<TElement, TPriority>[];
+    readonly #comparer: (first: TPriority, second: TPriority) => number;
     #size: number;
 
-    public constructor(items: PriorityQueueNode<T>[] = []) {
-        this.#nodes = items;
-        this.#size = items.length;
+    public constructor(params?: {
+        readonly items?: PriorityQueueNode<TElement, TPriority>[]
+        readonly comparer?: (first: TPriority, second: TPriority) => number
+    }) {
+        this.#nodes = params?.items ?? [];
+        this.#comparer = params?.comparer ?? PriorityQueue.#defaultComparer;
+        this.#size = this.#nodes.length;
 
         if (this.#size > 1) {
             this.#heapify();
         }
     }
 
-    public getElements(): T[] {
+    public getElements(): TElement[] {
         return this.#nodes.map((node) => node[0]);
     }
 
-    public enqueue(element: T, priority: number): void {
+    public enqueue(element: TElement, priority: TPriority): void {
         const currentSize = this.#size;
 
         if (this.#nodes.length === currentSize) {
@@ -33,7 +39,7 @@ export class PriorityQueue<T> {
         this.#moveUp([element, priority], currentSize);
     }
 
-    public peek(): T {
+    public peek(): TElement {
         if (this.#size === 0) {
             throw new Error('Empty queue');
         }
@@ -41,7 +47,7 @@ export class PriorityQueue<T> {
         return this.#nodes[0][0];
     }
 
-    public tryPeek(): PriorityQueueNode<T> | undefined {
+    public tryPeek(): PriorityQueueNode<TElement, TPriority> | undefined {
         if (this.#size === 0) {
             return undefined;
         }
@@ -49,7 +55,7 @@ export class PriorityQueue<T> {
         return this.#nodes[0];
     }
 
-    public dequeue(): T {
+    public dequeue(): TElement {
         if (this.#size === 0) {
             throw new Error('Empty queue');
         }
@@ -59,7 +65,7 @@ export class PriorityQueue<T> {
         return element;
     }
 
-    public tryDequeue(): PriorityQueueNode<T> | undefined {
+    public tryDequeue(): PriorityQueueNode<TElement, TPriority> | undefined {
         if (this.#size === 0) {
             return undefined;
         }
@@ -97,14 +103,14 @@ export class PriorityQueue<T> {
         }
     }
 
-    #moveUp(node: PriorityQueueNode<T>, nodeIndex: number): void {
+    #moveUp(node: PriorityQueueNode<TElement, TPriority>, nodeIndex: number): void {
         const nodes = this.#nodes;
 
         while (nodeIndex > 0) {
             const parentIndex = PriorityQueue.#getParentIndex(nodeIndex);
             const parent = nodes[parentIndex];
 
-            if (node[1] < parent[1]) {
+            if (this.#comparer(node[1], parent[1]) < 0) {
                 nodes[nodeIndex] = parent;
                 nodeIndex = parentIndex;
             } else {
@@ -115,7 +121,7 @@ export class PriorityQueue<T> {
         nodes[nodeIndex] = node;
     }
 
-    #moveDown(node: PriorityQueueNode<T>, nodeIndex: number): void {
+    #moveDown(node: PriorityQueueNode<TElement, TPriority>, nodeIndex: number): void {
         const nodes = this.#nodes;
         const size = this.#size;
         let i: number;
@@ -127,13 +133,13 @@ export class PriorityQueue<T> {
             const childIndexUpperBound = Math.min(i + ARITY, size);
             while (++i < childIndexUpperBound) {
                 const nextChild = nodes[i];
-                if (nextChild[1] < minChild[1]) {
+                if (this.#comparer(nextChild[1], minChild[1]) < 0) {
                     minChild = nextChild;
                     minChildIndex = i;
                 }
             }
 
-            if (node[1] <= minChild[1]) {
+            if (this.#comparer(node[1], minChild[1]) <= 0) {
                 break;
             }
 
@@ -142,6 +148,18 @@ export class PriorityQueue<T> {
         }
 
         nodes[nodeIndex] = node;
+    }
+
+    static #defaultComparer(first: PriorityQueueNodePriority, second: PriorityQueueNodePriority): number {
+        if (first < second) {
+            return -1;
+        }
+
+        if (first > second) {
+            return 1;
+        }
+
+        return 0;
     }
 
     static #getParentIndex(index: number): number {
